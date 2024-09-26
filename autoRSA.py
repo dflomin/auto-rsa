@@ -36,6 +36,7 @@ try:
     from publicAPI import *
     from robinhoodAPI import *
     from schwabAPI import *
+    from sofiAPI import *
     from tastyAPI import *
     from tornadoAPI import *
     from tradierAPI import *
@@ -50,7 +51,6 @@ except Exception as e:
 # Initialize .env file
 load_dotenv()
 
-
 # Global variables
 SUPPORTED_BROKERS = [
     "bbae",
@@ -62,6 +62,7 @@ SUPPORTED_BROKERS = [
     "public",
     "robinhood",
     "schwab",
+    "sofi",
     "tastytrade",
     "tornado",
     "tradier",
@@ -76,6 +77,7 @@ DAY1_BROKERS = [
     "firstrade",
     "public",
     "schwab",
+    "sofi",
     "tastytrade",
     "tradier",
     "webull",
@@ -118,7 +120,7 @@ def fun_run(orderObj: stockOrder, command, botObj=None, loop=None):
             try:
                 # Initialize broker
                 fun_name = broker + first_command
-                if broker.lower() == "fidelity":
+                if broker.lower() in ["fidelity"]:
                     # Fidelity requires docker mode argument, botObj, and loop
                     orderObj.set_logged_in(
                         globals()[fun_name](
@@ -132,7 +134,6 @@ def fun_run(orderObj: stockOrder, command, botObj=None, loop=None):
                         globals()[fun_name](DOCKER=DOCKER_MODE, loop=loop),
                         broker,
                     )
-
                 elif broker.lower() in [
                     "bbae",
                     "dspac",
@@ -144,7 +145,7 @@ def fun_run(orderObj: stockOrder, command, botObj=None, loop=None):
                     orderObj.set_logged_in(
                         globals()[fun_name](botObj=botObj, loop=loop), broker
                     )
-                elif broker.lower() in ["chase", "vanguard"]:
+                elif broker.lower() in ["chase", "sofi", "vanguard"]:
                     fun_name = broker + "_run"
                     # PLAYWRIGHT_BROKERS have to run all transactions with one function
                     th = ThreadHandler(
@@ -167,7 +168,7 @@ def fun_run(orderObj: stockOrder, command, botObj=None, loop=None):
                     orderObj.set_logged_in(globals()[fun_name](), broker)
 
                 print()
-                if broker.lower() not in ["chase", "vanguard"]:
+                if broker.lower() not in ["chase", "sofi", "vanguard"]:
                     # Verify broker is logged in
                     orderObj.order_validate(preLogin=False)
                     logged_in_broker = orderObj.get_logged_in(broker)
@@ -185,16 +186,11 @@ def fun_run(orderObj: stockOrder, command, botObj=None, loop=None):
                             orderObj,
                             loop,
                         )
-                        printAndDiscord(
-                            f"All {broker.capitalize()} transactions complete",
-                            loop,
-                        )
             except Exception as ex:
                 print(traceback.format_exc())
                 print(f"Error in {fun_name} with {broker}: {ex}")
                 print(orderObj)
             print()
-        printAndDiscord("All commands complete in all brokers", loop)
     else:
         print(f"Error: {command} is not a valid command")
 
@@ -409,10 +405,7 @@ if __name__ == "__main__":
             print()
             await ctx.send("Restarting...")
             await bot.close()
-            if DOCKER_MODE:
-                os._exit(0)  # Special exit code to restart docker container
-            else:
-                os.execv(sys.executable, [sys.executable] + sys.argv)
+            os._exit(0)  # Special exit code to restart docker container
 
         # Catch bad commands
         @bot.event
